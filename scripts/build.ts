@@ -10,6 +10,31 @@ const args = process.argv.slice(2)
 const compile = args.includes('--compile')
 const dev = args.includes('--dev')
 
+function normalizeOutfile(name: string): string {
+  const trimmed = name.trim()
+  if (
+    trimmed.startsWith('./') ||
+    trimmed.startsWith('../') ||
+    trimmed.includes('/')
+  ) {
+    return trimmed
+  }
+  return `./${trimmed}`
+}
+
+let outfileOverride: string | null = null
+for (let i = 0; i < args.length; i += 1) {
+  const arg = args[i]
+  if (arg === '--outfile' && args[i + 1]) {
+    outfileOverride = normalizeOutfile(args[i + 1]!)
+    i += 1
+    continue
+  }
+  if (arg.startsWith('--outfile=')) {
+    outfileOverride = normalizeOutfile(arg.slice('--outfile='.length))
+  }
+}
+
 const fullExperimentalFeatures = [
   'AGENT_MEMORY_SNAPSHOT',
   'AGENT_TRIGGERS',
@@ -109,13 +134,15 @@ for (let i = 0; i < args.length; i += 1) {
 }
 const features = [...featureSet]
 
-const outfile = compile
-  ? dev
-    ? './dist/cli-dev'
-    : './dist/cli'
-  : dev
-    ? './cli-dev'
-    : './cli'
+const outfile =
+  outfileOverride ??
+  (compile
+    ? dev
+      ? './dist/cli-dev'
+      : './dist/cli'
+    : dev
+      ? './cli-dev'
+      : './cli')
 const buildTime = new Date().toISOString()
 const version = dev ? getDevVersion(pkg.version) : pkg.version
 
